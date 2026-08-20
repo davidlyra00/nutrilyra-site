@@ -551,6 +551,27 @@
     color:var(--gray-blue-dim);
     margin-top:10px;
   }
+  .field-error{
+    font-size:13px;
+    color:#e0806b;
+    margin-top:10px;
+    display:none;
+    animation:errorIn .25s ease;
+  }
+  .field-error.show{display:block;}
+  .form-step input.invalid,.form-step select.invalid{
+    border-color:#e0806b;
+    animation:shake .35s ease;
+  }
+  @keyframes errorIn{
+    from{opacity:0;transform:translateY(-4px);}
+    to{opacity:1;transform:translateY(0);}
+  }
+  @keyframes shake{
+    0%,100%{transform:translateX(0);}
+    25%{transform:translateX(-6px);}
+    75%{transform:translateX(6px);}
+  }
 
   .form-modal-nav{
     display:flex;
@@ -795,6 +816,7 @@ src="https://www.facebook.com/tr?id=1071749618731137&ev=PageView&noscript=1"
     <div class="form-step active" data-step="1">
       <h3>Qual é o seu nome?</h3>
       <input type="text" id="f-nome" placeholder="Seu nome completo" autocomplete="name">
+      <div class="field-error" id="error-1">Preenche esse campo pra continuar</div>
       <div class="form-modal-nav">
         <button class="form-nav-btn primary" onclick="nextStep()">Próxima</button>
       </div>
@@ -804,6 +826,7 @@ src="https://www.facebook.com/tr?id=1071749618731137&ev=PageView&noscript=1"
       <h3>Qual seu celular / WhatsApp?</h3>
       <input type="tel" id="f-celular" placeholder="Ex: (83) 99999-9999 ou +1 555 123 4567" autocomplete="tel">
       <div class="field-hint">Se você estiver fora do Brasil, inclua o código do país (ex: +1, +351)</div>
+      <div class="field-error" id="error-2">Preenche esse campo pra continuar</div>
       <div class="form-modal-nav">
         <button class="form-nav-btn secondary" onclick="prevStep()">Voltar</button>
         <button class="form-nav-btn primary" onclick="nextStep()">Próxima</button>
@@ -813,6 +836,7 @@ src="https://www.facebook.com/tr?id=1071749618731137&ev=PageView&noscript=1"
     <div class="form-step" data-step="3">
       <h3>Qual seu Instagram?</h3>
       <input type="text" id="f-instagram" placeholder="@seuusuario">
+      <div class="field-error" id="error-3">Preenche esse campo pra continuar</div>
       <div class="form-modal-nav">
         <button class="form-nav-btn secondary" onclick="prevStep()">Voltar</button>
         <button class="form-nav-btn primary" onclick="nextStep()">Próxima</button>
@@ -828,6 +852,7 @@ src="https://www.facebook.com/tr?id=1071749618731137&ev=PageView&noscript=1"
         <option value="Já fui paciente">Já fui paciente</option>
         <option value="Outro">Outro</option>
       </select>
+      <div class="field-error" id="error-4">Escolhe uma opção pra continuar</div>
       <div class="form-modal-nav">
         <button class="form-nav-btn secondary" onclick="prevStep()">Voltar</button>
         <button class="form-nav-btn primary" onclick="nextStep()">Próxima</button>
@@ -837,6 +862,7 @@ src="https://www.facebook.com/tr?id=1071749618731137&ev=PageView&noscript=1"
     <div class="form-step" data-step="5">
       <h3>Qual seu objetivo?</h3>
       <input type="text" id="f-objetivo" placeholder="Ex: emagrecer, ganhar massa, melhorar performance">
+      <div class="field-error" id="error-5">Preenche esse campo pra continuar</div>
       <div class="form-modal-nav">
         <button class="form-nav-btn secondary" onclick="prevStep()">Voltar</button>
         <button class="form-nav-btn primary" onclick="submitFormFinal()">Enviar</button>
@@ -932,7 +958,43 @@ src="https://www.facebook.com/tr?id=1071749618731137&ev=PageView&noscript=1"
     if(currentStep === 5) answers.objetivo = document.getElementById('f-objetivo').value.trim();
   }
 
+  const stepFieldIds = {1:'f-nome', 2:'f-celular', 3:'f-instagram', 4:'f-origem', 5:'f-objetivo'};
+
+  // some o erro assim que a pessoa começa a corrigir, sem precisar clicar de novo
+  Object.entries(stepFieldIds).forEach(([step, id])=>{
+    const el = document.getElementById(id);
+    const evt = el.tagName === 'SELECT' ? 'change' : 'input';
+    el.addEventListener(evt, ()=>{
+      if(el.value.trim() !== ''){
+        el.classList.remove('invalid');
+        const errorEl = document.getElementById('error-' + step);
+        if(errorEl) errorEl.classList.remove('show');
+      }
+    });
+  });
+
+  function validateCurrentStep(){
+    const fieldId = stepFieldIds[currentStep];
+    const field = document.getElementById(fieldId);
+    const errorEl = document.getElementById('error-' + currentStep);
+    const isValid = field.value.trim() !== '';
+
+    if(isValid){
+      field.classList.remove('invalid');
+      if(errorEl) errorEl.classList.remove('show');
+      return true;
+    } else {
+      field.classList.remove('invalid');
+      void field.offsetWidth; // reinicia a animação de "shake" se clicar de novo
+      field.classList.add('invalid');
+      if(errorEl) errorEl.classList.add('show');
+      field.focus();
+      return false;
+    }
+  }
+
   function nextStep(){
+    if(!validateCurrentStep()) return;
     collectCurrentAnswer();
     if(currentStep < totalSteps){
       showStep(currentStep + 1);
@@ -999,6 +1061,7 @@ src="https://www.facebook.com/tr?id=1071749618731137&ev=PageView&noscript=1"
   });
 
   function submitFormFinal(){
+    if(!validateCurrentStep()) return;
     collectCurrentAnswer();
     trySendEmail('Completo — preencheu o formulário inteiro');
 
